@@ -28,8 +28,16 @@
 # If this doesn't work, bite the bullet and install llvm from
 # homebrew or by hand.
 
-# The library directory that contains the Xcode-bundled libclang
-EXTRA_LIBDIR="`xcrun --show-toolchain-path`/usr/lib"
+# The library directory that contains the Xcode-bundled libclang.
+# With only the Command Line Tools selected, the toolchain path has no
+# libclang.dylib; it lives in <CLT>/usr/lib, and a full Xcode.app is a last resort.
+TOOLCHAIN_LIBDIR=$(shell xcrun --show-toolchain-path)/usr/lib
+CLT_LIBDIR=$(shell xcode-select --print-path)/usr/lib
+XCODE_LIBDIR=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib
+EXTRA_LIBDIR=$(firstword $(dir $(wildcard $(TOOLCHAIN_LIBDIR)/libclang.dylib $(CLT_LIBDIR)/libclang.dylib $(XCODE_LIBDIR)/libclang.dylib)))
+ifeq ($(EXTRA_LIBDIR),)
+  $(error libclang.dylib not found under $(TOOLCHAIN_LIBDIR), $(CLT_LIBDIR) or $(XCODE_LIBDIR))
+endif
 
 INCDIR=include
 
