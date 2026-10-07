@@ -288,13 +288,27 @@ void format_c_primitive_type(CXType type, enum CXTypeKind kind)
          * CXType_Float16: see https://reviews.llvm.org/D33719
          */
     };
-    if (kind == CXType_Complex) {
-        fprintf(ffifile, "(complex-%s ())", map[clang_getElementType(type).kind]);
-    } else if (kind == CXType_Vector) {
-        // fprintf(ffifile, "(__vector-%s ())", map[clang_getElementType(type).kind]);
-	fprintf(ffifile, "(%s ())", map[clang_getElementType(type).kind]);
+    const size_t nmap = sizeof(map) / sizeof(map[0]);
+    char *name = ((size_t)kind < nmap) ? map[kind] : NULL;
+    if (kind == CXType_Complex || kind == CXType_Vector) {
+        enum CXTypeKind ek = clang_getElementType(type).kind;
+        char *elt = ((size_t)ek < nmap) ? map[ek] : NULL;
+        if (!elt) {
+            fprintf(stderr, "warning: unmapped element CXTypeKind %d, using float\n", (int)ek);
+            elt = "float";
+        }
+        if (kind == CXType_Complex) {
+            fprintf(ffifile, "(complex-%s ())", elt);
+        } else {
+            // fprintf(ffifile, "(__vector-%s ())", elt);
+            fprintf(ffifile, "(%s ())", elt);
+        }
+    } else if (name) {
+        fprintf(ffifile, "(%s ())", name);
     } else {
-        fprintf(ffifile, "(%s ())", map[kind]);
+        /* Unknown builtin: emit void rather than crashing or printing "(null ())". */
+        fprintf(stderr, "warning: unmapped CXTypeKind %d, emitting void\n", (int)kind);
+        fprintf(ffifile, "(void ())");
     }
 }
 
